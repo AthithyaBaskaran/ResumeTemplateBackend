@@ -1,25 +1,23 @@
 package com.example.Resumeproject.services;
 
 import com.example.Resumeproject.dto.LoginRequest;
+import com.example.Resumeproject.dto.LoginResponse;
 import com.example.Resumeproject.dto.RegisterRequest;
+import com.example.Resumeproject.dto.RegisterResponse;
 import com.example.Resumeproject.models.User;
-import com.example.Resumeproject.repositories.UserRepository;
-import com.example.Resumeproject.response.SuccessResponse;
+import com.example.Resumeproject.repositories.AuthRepository;
 import com.example.Resumeproject.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class UserService {
+public class AuthService {
 
     @Autowired
-    UserRespository userRepository;
+    private AuthRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -28,13 +26,19 @@ public class UserService {
     private JwtUtil jwtUtil;
 
 
-    public SuccessResponse<Object> register(RegisterRequest request) {
+    public RegisterResponse register(RegisterRequest request) {
+        RegisterResponse response = new RegisterResponse();
+
         if (userRepository.existsByUsername(request.getUsername())) {
-            return new SuccessResponse<>(HttpStatus.BAD_REQUEST, "Username already exists", null);
+            response.setSuccess(false);
+            response.setMessage("Username already exists");
+            return response;
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            return new SuccessResponse<>(HttpStatus.BAD_REQUEST, "Email already exists", null);
+            response.setSuccess(false);
+            response.setMessage("Email already exists");
+            return response;
         }
 
         User user = new User();
@@ -46,34 +50,31 @@ public class UserService {
         user.setCreatedAt(System.currentTimeMillis());
 
         User savedUser = userRepository.save(user);
-        
-        Map<String, Object> data = new HashMap<>();
-        data.put("userId", savedUser.getId());
-        data.put("username", savedUser.getUsername());
-        data.put("email", savedUser.getEmail());
-        
-        return new SuccessResponse<>(HttpStatus.CREATED, "User registered successfully", data);
+        response.setSuccess(true);
+        response.setMessage("User registered successfully");
+        response.setUserId(savedUser.getId());
+        response.setUsername(savedUser.getUsername());
+        response.setEmail(savedUser.getEmail());
+
+
+        return response;
     }
 
-    public SuccessResponse<Object> login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
         
         if (userOptional.isEmpty()) {
-            return new SuccessResponse<>(HttpStatus.UNAUTHORIZED, "User not found", null);
+            return new LoginResponse(false, "User not found", null, null);
         }
         
         User user = userOptional.get();
         
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return new SuccessResponse<>(HttpStatus.UNAUTHORIZED, "Invalid password", null);
+            return new LoginResponse(false, "Invalid password", null, null);
         }
         
-        String token = jwtUtil.generateTokenWithUserId(user.getEmail(), user.getId());
-        
-        Map<String, Object> data = new HashMap<>();
-        data.put("token", token);
-        data.put("email", user.getEmail());
-        
-        return new SuccessResponse<>(HttpStatus.OK, "Login successful", data);
+        String token = jwtUtil.generateToken(user.getEmail());
+        return new LoginResponse(true, "Login successful", token, user.getEmail());
     }
+    
 }

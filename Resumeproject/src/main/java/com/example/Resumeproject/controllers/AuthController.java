@@ -2,8 +2,8 @@ package com.example.Resumeproject.controllers;
 
 import com.example.Resumeproject.dto.LoginRequest;
 import com.example.Resumeproject.dto.RegisterRequest;
-import com.example.Resumeproject.response.SuccessResponse;
-import com.example.Resumeproject.services.UserService;
+import com.example.Resumeproject.dto.RegisterResponse;
+import com.example.Resumeproject.services.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     @Autowired
-    private UserService userService;
+    private AuthService userService;
 
     @PostMapping("register")
     public SuccessResponse<Object> getRegister(@RequestBody RegisterRequest request) {
