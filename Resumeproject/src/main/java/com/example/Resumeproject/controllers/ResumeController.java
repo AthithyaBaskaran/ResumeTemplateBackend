@@ -3,6 +3,7 @@ package com.example.Resumeproject.controllers;
 import com.example.Resumeproject.dto.SkillExtractionResponse;
 import com.example.Resumeproject.models.Resume;
 import com.example.Resumeproject.models.Skill;
+import com.example.Resumeproject.response.SuccessResponse;
 import com.example.Resumeproject.services.ResumeService;
 import com.example.Resumeproject.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +27,7 @@ public class ResumeController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/upload")
-    public ResponseEntity<SkillExtractionResponse> uploadResume(
+    public SuccessResponse<Object> uploadResume(
             @RequestParam("file") MultipartFile file,
             @RequestHeader("Authorization") String token) {
         try {
@@ -35,24 +36,23 @@ public class ResumeController {
             Long userId = jwtUtil.extractUserId(cleanToken);
 
             if (userId == null) {
-                SkillExtractionResponse errorResponse = new SkillExtractionResponse();
-                errorResponse.setSuccess(false);
-                errorResponse.setMessage("Invalid token: userId not found. Please login again.");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+                return new SuccessResponse<>(HttpStatus.UNAUTHORIZED, "Invalid token: userId not found. Please login again.", null);
             }
 
             SkillExtractionResponse response = resumeService.uploadAndExtractSkills(file, userId, username);
 
             if (response.isSuccess()) {
-                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+                Map<String, Object> data = new HashMap<>();
+                data.put("resumeId", response.getResumeId());
+                data.put("userId", response.getUserId());
+                data.put("username", response.getUsername());
+                data.put("extractedSkills", response.getExtractedSkills());
+                return new SuccessResponse<>(HttpStatus.CREATED, response.getMessage(), data);
             } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                return new SuccessResponse<>(HttpStatus.BAD_REQUEST, response.getMessage(), null);
             }
         } catch (Exception e) {
-            SkillExtractionResponse errorResponse = new SkillExtractionResponse();
-            errorResponse.setSuccess(false);
-            errorResponse.setMessage("Error: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            return new SuccessResponse<>(HttpStatus.INTERNAL_SERVER_ERROR, "Error: " + e.getMessage(), null);
         }
     }
 
